@@ -1,16 +1,16 @@
 package pkg
 
 import (
-	"io/ioutil"
+	"io/fs"
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 
 	"github.com/dustin/go-humanize"
-	"github.com/mattn/go-zglob"
 	"github.com/thoas/go-funk"
 )
 
@@ -19,7 +19,7 @@ var moduleRegex = regexp.MustCompile("packagefile (.*)=(.*)")
 func run(cmd []string) string {
 	out, err := exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Error running command %v: %v\nOutput: %s", cmd, err, out)
 	}
 	os.Remove("goweight-bin-target")
 	return string(out)
@@ -65,13 +65,22 @@ func (g *GoWeight) BuildCurrent() string {
 
 func (g *GoWeight) Process(work string) []*ModuleEntry {
 
-	files, err := zglob.Glob(work + "**/importcfg")
+	var files []string
+	err := filepath.WalkDir(work, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() && d.Name() == "importcfg" {
+			files = append(files, path)
+		}
+		return nil
+	})
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Error walking directory: %v", err)
 	}
 
 	allLines := funk.Uniq(funk.FlattenDeep(funk.Map(files, func(file string) []string {
-		f, err := ioutil.ReadFile(file)
+		f, err := os.ReadFile(file)
 		if err != nil {
 			return []string{}
 		}

@@ -6,7 +6,7 @@ import (
 
 	"github.com/jondot/goweight/pkg"
 
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
+	kingpin "github.com/alecthomas/kingpin/v2"
 )
 
 var (
