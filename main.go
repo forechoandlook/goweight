@@ -26,6 +26,7 @@ var (
 	packages   = kingpin.Arg("packages", "Packages to build").String()
 	binaryFile = kingpin.Flag("binary", "Analyze a binary file instead of building").Short('b').String()
 	verbose    = kingpin.Flag("verbose", "Detailed output showing all packages").Short('v').Bool()
+	buildAnalysis = kingpin.Flag("build-analysis", "Analyze build process to show compilation sizes").Bool()
 )
 
 func main() {
@@ -37,6 +38,13 @@ func main() {
 
 	if *binaryFile != "" {
 		modules = weight.ProcessBinary(*binaryFile)
+	} else if *buildAnalysis {
+		// 使用构建过程分析模式
+		var pkgArgs []string
+		if *packages != "" {
+			pkgArgs = append(pkgArgs, *packages)
+		}
+		modules = weight.AnalyzeBuildProcess(pkgArgs...)
 	} else {
 		if *buildTags != "" {
 			weight.BuildCmd = append(weight.BuildCmd, "-tags", *buildTags)
@@ -45,8 +53,8 @@ func main() {
 			weight.BuildCmd = append(weight.BuildCmd, *packages)
 		}
 
-		work := weight.BuildCurrent()
-		modules = weight.Process(work)
+		// 使用新的方法分析最终的二进制文件，而不是中间构建产物
+		modules = weight.BuildAndAnalyzeBinary()
 	}
 
 	if *jsonOutput {
